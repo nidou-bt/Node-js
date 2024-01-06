@@ -1,12 +1,53 @@
 // Dependencies
 var http = require("http");
+var https = require("https");
 var url = require("url");
 var StringDecoder = require("string_decoder").StringDecoder;
 // to show an object inside terminal log
 var util = require("util");
+var config = require("./config");
+var fs = require("fs");
 
 // the server should respond to all requests with a string
-var server = http.createServer(function (req, res) {
+// Instantiate the HTTP server
+var httpServer = http.createServer(function (req, res) {
+  unifiedServer(req, res);
+});
+
+// Start the server, and have it listen on port 3001
+httpServer.listen(config.httpPort, function () {
+  console.log(
+    "the server is listening on httpPort " +
+      config.httpPort +
+      " in " +
+      config.envName +
+      " environment now"
+  );
+});
+
+// Instantiate the HTTPS server
+var httpsServerOption = {
+  key: fs.readFileSync("./https/key.pem"),
+  cert: fs.readFileSync("./https/cert.pem"),
+};
+var httpsServer = https.createServer(httpsServerOption, function (req, res) {
+  unifiedServer(req, res);
+});
+
+// Start the server, and have it listen on port 3001
+httpsServer.listen(config.httpsPort, function () {
+  console.log(
+    "the server is listening on httpsPort " +
+      config.httpsPort +
+      " in " +
+      config.envName +
+      " environment now"
+  );
+});
+
+// All the server logic
+
+var unifiedServer = function (req, res) {
   // Get the url and parse it
   var parsedUrl = url.parse(req.url, true);
 
@@ -50,6 +91,11 @@ var server = http.createServer(function (req, res) {
     };
 
     // Route the request to the handler specified in the router
+    function sample(data, callback) {
+      // Callback a http status code, and a pyaload object
+      callback(406, { name: "sample handler" });
+    }
+
     chosenHandler(data, function (statusCode, payload) {
       // Use the status code called back by the handler, or default to 200
       statusCode = typeof statusCode === "number" ? statusCode : 200;
@@ -85,12 +131,7 @@ var server = http.createServer(function (req, res) {
       );
     });
   });
-});
-
-// Start the server, and have it listen on port 3001
-server.listen(3001, function () {
-  console.log("the server is listening on port 3001 now");
-});
+};
 
 // Define the handlers
 var handlers = {};
@@ -101,6 +142,12 @@ handlers.sample = function (data, callback) {
   callback(406, { name: "sample handler" });
 };
 
+// ping handlers
+handlers.ping = function (data, callback) {
+  // Callback a http status code, and a pyaload object
+  callback(200);
+};
+
 // Not found handler
 handlers.notFound = function (data, callback) {
   callback(404);
@@ -109,4 +156,5 @@ handlers.notFound = function (data, callback) {
 // Define a request router
 var router = {
   sample: handlers.sample,
+  ping: handlers.ping,
 };
