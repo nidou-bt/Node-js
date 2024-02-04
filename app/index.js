@@ -9,6 +9,12 @@ var config = require("./config");
 var fs = require("fs");
 var handlers = require("./lib/handlers");
 
+// for testing
+// var _data = require("./lib/data");
+// _data.create("test", "test", { foo: "hellooo" }, function (data) {
+//   console.log("data", data);
+// });
+
 // the server should respond to all requests with a string
 // Instantiate the HTTP server
 var httpServer = http.createServer(function (req, res) {
