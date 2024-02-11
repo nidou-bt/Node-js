@@ -115,7 +115,7 @@ var unifiedServer = function (req, res) {
       var logBody = {
         path: trimmedPath,
         method,
-        query: queryStringObject,
+        queryStringObject,
         headers,
         buffer,
         statusCode,
