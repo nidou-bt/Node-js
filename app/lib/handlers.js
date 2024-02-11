@@ -3,6 +3,8 @@
  */
 
 // Dependencies
+var _data = require("./data");
+var helpers = require("./helpers");
 
 // Define the handlers
 var handlers = {};
@@ -16,8 +18,6 @@ handlers.users = function (data, callback) {
     // method not allowed
     callback(405);
   }
-  // Callback a http status code, and a pyaload object
-  callback(406, { name: "sample handler" });
 };
 
 // Container for the users submethods
@@ -27,34 +27,68 @@ handlers._users = {};
 // Required data: firstName, lastName, phone, password, tosAgreement
 // Optional data: none
 handlers._users.post = function (data, callback) {
+  console.log("data", data.payload.firstName);
   var firstName =
     typeof data.payload.firstName === "string" &&
-    data.paylaod.firstName.length.trim() > 0
-      ? data.paylaod.firstName.length.trim()
+    data.payload.firstName.trim().length > 0
+      ? data.payload.firstName.trim()
       : false;
   var lastName =
     typeof data.payload.lastName === "string" &&
-    data.paylaod.lastName.length.trim() > 0
-      ? data.paylaod.lastName.length.trim()
+    data.payload.lastName.trim().length > 0
+      ? data.payload.lastName.trim()
       : false;
   var phone =
     typeof data.payload.phone === "string" &&
-    data.paylaod.phone.length.trim() > 0
-      ? data.paylaod.phone.length.trim()
+    data.payload.phone.trim().length > 0
+      ? data.payload.phone.trim()
       : false;
   var password =
     typeof data.payload.password === "string" &&
-    data.paylaod.password.length.trim() > 0
-      ? data.paylaod.password.length.trim()
+    data.payload.password.trim().length > 0
+      ? data.payload.password.trim()
       : false;
   var tosAgreement =
     typeof data.payload.tosAgreement === "boolean" &&
-    data.paylaod.tosAgreement === true
+    data.payload.tosAgreement === true
       ? true
       : false;
 
   if (firstName && lastName && phone && password && tosAgreement) {
     // Make sure that the user doesnt already exist
+    _data.read("users", phone, function (err, data) {
+      if (err) {
+        // Hash the password
+        var hashedPassword = helpers.hash(password);
+        if (!hashedPassword) {
+          callback(500, { Error: "Could not hash the password" });
+        } else {
+          //Create the user object
+          var userObject = {
+            firstName: firstName,
+            lastName: lastName,
+            phone: phone,
+            hashedPassword: hashedPassword,
+            tosAgreement: true,
+          };
+
+          // Store the user
+          _data.create("users", phone, userObject, function (err) {
+            if (!err) {
+              callback(200);
+            } else {
+              console.log(err);
+              callback(500, { Error: "Could not create the new user" });
+            }
+          });
+        }
+      } else {
+        // User already exists
+        callback(400, {
+          Error: "A user with that phone number already exists",
+        });
+      }
+    });
   } else {
     callback(400, { Error: "Missing required fields" });
   }

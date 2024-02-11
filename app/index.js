@@ -5,9 +5,10 @@ var url = require("url");
 var StringDecoder = require("string_decoder").StringDecoder;
 // to show an object inside terminal log
 var util = require("util");
-var config = require("./config");
+var config = require("./lib/config");
 var fs = require("fs");
 var handlers = require("./lib/handlers");
+var helpers = require("./lib/helpers");
 
 // for testing
 // var _data = require("./lib/data");
@@ -32,25 +33,25 @@ httpServer.listen(config.httpPort, function () {
   );
 });
 
-// Instantiate the HTTPS server
-var httpsServerOption = {
-  key: fs.readFileSync("./https/key.pem"),
-  cert: fs.readFileSync("./https/cert.pem"),
-};
-var httpsServer = https.createServer(httpsServerOption, function (req, res) {
-  unifiedServer(req, res);
-});
+// // Instantiate the HTTPS server
+// var httpsServerOption = {
+//   key: fs.readFileSync("./https/key.pem"),
+//   cert: fs.readFileSync("./https/cert.pem"),
+// };
+// var httpsServer = https.createServer(httpsServerOption, function (req, res) {
+//   unifiedServer(req, res);
+// });
 
-// Start the server, and have it listen on port 3001
-httpsServer.listen(config.httpsPort, function () {
-  console.log(
-    "the server is listening on httpsPort " +
-      config.httpsPort +
-      " in " +
-      config.envName +
-      " environment now"
-  );
-});
+// // Start the server, and have it listen on port 3001
+// httpsServer.listen(config.httpsPort, function () {
+//   console.log(
+//     "the server is listening on httpsPort " +
+//       config.httpsPort +
+//       " in " +
+//       config.envName +
+//       " environment now"
+//   );
+// });
 
 // All the server logic
 
@@ -82,7 +83,6 @@ var unifiedServer = function (req, res) {
     buffer += decoder.end();
 
     // Choose the handler this request should go to, If one is not found, use the notFound handler
-
     var chosenHandler =
       typeof router[trimmedPath] !== "undefined"
         ? router[trimmedPath]
@@ -94,7 +94,7 @@ var unifiedServer = function (req, res) {
       queryStringObject: queryStringObject,
       method: method,
       headers: headers,
-      payload: buffer,
+      payload: helpers.parseJsonToObject(buffer),
     };
 
     chosenHandler(data, function (statusCode, payload) {
