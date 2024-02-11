@@ -121,7 +121,68 @@ handlers._users.get = function (data, callback) {
 };
 
 // Users - put
-handlers._users.put = function (data, callback) {};
+// Required data phone
+//  Optional data: firstName, lastName, password (at least one must specified)
+// @TODO only let an  authenticated user access their object. Don't let them access anyone else's
+handlers._users.put = function (data, callback) {
+  // Check for required field
+  var phone =
+    typeof data.queryStringObject.phone === "string" &&
+    data.queryStringObject.phone.trim()
+      ? data.queryStringObject.phone
+      : false;
+
+  // Check for the optional fields
+  var firstName =
+    typeof data.payload.firstName === "string" &&
+    data.payload.firstName.trim().length > 0
+      ? data.payload.firstName.trim()
+      : false;
+  var lastName =
+    typeof data.payload.lastName === "string" &&
+    data.payload.lastName.trim().length > 0
+      ? data.payload.lastName.trim()
+      : false;
+  var password =
+    typeof data.payload.password === "string" &&
+    data.payload.password.trim().length > 0
+      ? data.payload.password.trim()
+      : false;
+
+  //Error if phone is invalid
+  if (phone) {
+    if (firstName || lastName || password) {
+      // Lookup the user
+      _data.read("users", phone, function (err, userData) {
+        if (!err && userData) {
+          // Update the fields necessary
+          if (firstName) {
+            userData.firstName = firstName;
+          }
+          if (lastName) {
+            userData.lastName = lastName;
+          }
+          if (password) {
+            userData.hashedPassword = helpers.hash(password);
+          }
+          // Store the new update
+          _data.update("users", phone, userData, function (err) {
+            if (!err) {
+              callback(200);
+            } else {
+              console.log(err);
+              callback(500, { Error: "Could not update the user" });
+            }
+          });
+        } else {
+          callback(400, { Error: "The specified user does not exist" });
+        }
+      });
+    }
+  } else {
+    callback(400, { Error: "Missing required fields" });
+  }
+};
 
 // Users - delete
 handlers._users.delete = function (data, callback) {};
