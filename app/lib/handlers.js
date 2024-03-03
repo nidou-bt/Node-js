@@ -213,6 +213,81 @@ handlers._users.delete = function (data, callback) {
   }
 };
 
+// Tokens handlers
+handlers.tokens = function (data, callback) {
+  var acceptableMethods = ["post", "get", "put", "delete"];
+  if (acceptableMethods.indexOf(data.method) > -1) {
+    handlers._tokens[data.method](data, callback);
+  } else {
+    // method not allowed
+    callback(405);
+  }
+};
+
+// Container for all the tokens methods
+
+handlers._tokens = {};
+
+// Tokens - post
+//Required data: phone and password
+handlers._tokens.post = function (data, callback) {
+  var phone =
+    typeof data.payload.phone === "string" &&
+    data.payload.phone.trim().length > 0
+      ? data.payload.phone.trim()
+      : false;
+  var password =
+    typeof data.payload.password === "string" &&
+    data.payload.password.trim().length > 0
+      ? data.payload.password.trim()
+      : false;
+  if (phone && password) {
+    // Lookup the user who matches that phone number
+    _data.read("users", phone, function (err, userData) {
+      if (!err && userData) {
+        var hashedPassword = helpers.hash(password);
+        if ((hashedPassword = userData.hashedPassword)) {
+          // If valid, create new token with random name, set expiration date for one hour
+          var tokenId = helpers.createRandomString(20);
+          var expires = Date.now() + 1000 * 60 * 60;
+          var tokenObject = {
+            phone: phone,
+            id: tokenId,
+            expires: expires,
+          };
+
+          // Store the token
+          _data.create("tokens", tokenId, tokenObject, function (err) {
+            if (!err) {
+              callback(200, tokenObject);
+            } else {
+              callback(500, { Error: "Could not create the new token" });
+            }
+          });
+        } else {
+          callback(400, {
+            Error:
+              "Password did not match the specified user's stored password",
+          });
+        }
+      } else {
+        callback(400, { Error: "Could not find the specified user" });
+      }
+    });
+  } else {
+    callback(400, { Error: "Missing required field(s)" });
+  }
+};
+
+// Tokens - get
+handlers._tokens.get = function (data, callback) {};
+
+// Tokens - put
+handlers._tokens.put = function (data, callback) {};
+
+// Tokens - delete
+handlers._tokens.delete = function (data, callback) {};
+
 // Simple handlers
 handlers.sample = function (data, callback) {
   // Callback a http status code, and a pyaload object
